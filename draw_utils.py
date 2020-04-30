@@ -5,7 +5,7 @@ BRUSH = win32gui.CreateSolidBrush(255)
 
 
 def draw_line(dc: int, start_x: int, start_y: int, end_x: int, end_y: int):
-    hpen = win32gui.CreatePen(win32con.PS_SOLID, 4, 255)
+    hpen = win32gui.CreatePen(win32con.PS_SOLID, 2, 255)
     hopen = win32gui.SelectObject(dc, hpen)
     win32gui.MoveToEx(dc, start_x, start_y)
     win32gui.LineTo(dc, end_x, end_y)

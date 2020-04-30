@@ -7,6 +7,7 @@ import win32api
 import win32con
 
 ReadProcessMemory: Callable[[int, int, Any, int], bool] = windll.kernel32.ReadProcessMemory
+WriteProcessMemory: Callable[[int, int, Any, int], bool] = windll.kernel32.WriteProcessMemory
 
 
 def _rpm(process_handle: int, address: int, size: int) -> c_buffer:
@@ -15,6 +16,11 @@ def _rpm(process_handle: int, address: int, size: int) -> c_buffer:
     bytes_read = c_char(0)
     ReadProcessMemory(process_handle, address, buffer, buffer_size, byref(bytes_read))
     return buffer
+
+
+def wpm(process_handle: int, address: int, c_data: bytes):
+    bytes_write = c_char(0)
+    WriteProcessMemory(process_handle, address, c_data, len(c_data), byref(bytes_write))
 
 
 def rpm(process_handle: int, address: int, c_type) -> Any:

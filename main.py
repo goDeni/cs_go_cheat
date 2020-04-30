@@ -1,5 +1,5 @@
+import time
 from ctypes.wintypes import *
-from time import sleep
 from typing import Tuple
 
 import win32gui
@@ -9,7 +9,7 @@ import offsets
 from custom_types import Int4x4Array
 from player import Player
 from player_drawer import PlayerDrawer
-from process import rpm, get_process_handle, get_process_id
+from process import rpm, get_process_handle, get_process_id, wpm
 
 CSGO_PROCESS_NAME = 'csgo.exe'
 MODULE_NAME = "client_panorama.dll"
@@ -44,20 +44,30 @@ def main():
 
     with get_process_handle(pid) as process_handle:
         base_address = get_module_address(process_handle, MODULE_NAME)
+        attack_state = 0
+        TRIGGER_BOT = False
 
         while True:
             view_matrix = rpm(process_handle.handle, base_address + offsets.dwViewMatrix, Int4x4Array)
+            local_player_pointer = rpm(process_handle.handle, base_address + offsets.dwLocalPlayer, DWORD)
             local_player = Player(
                 process_handle.handle,
-                rpm(process_handle.handle, base_address + offsets.dwLocalPlayer, DWORD).value
+                local_player_pointer.value
             )
-            local_team = local_player.get_team()
+            local_player.read_all_variables()
+
             for i in range(64):
                 player_pointer = rpm(process_handle.handle, base_address + offsets.dwEntityList + (i * 0x10), DWORD)
                 other_player = Player(process_handle.handle, player_pointer.value)
-                if not other_player.is_alive() or other_player.get_team() == local_team:
+                if not other_player.is_alive() or other_player.get_team() == local_player.team:
                     continue
                 p_drawer = PlayerDrawer(other_player, view_matrix, dc, screen_x, screen_y)
+
+                if TRIGGER_BOT and i == local_player.target_id:
+                    if attack_state:
+                        attack_state = 0
+                    else:
+                        attack_state = 1
 
                 other_player.read_all_variables()
                 p_drawer.calc_position()
@@ -66,7 +76,11 @@ def main():
                     p_drawer.draw_border_box()
                     p_drawer.draw_health()
                     p_drawer.draw_line_to_player()
-            sleep(0.01)
+
+            if TRIGGER_BOT and attack_state:
+                attack_state = 0
+                wpm(process_handle.handle, base_address + offsets.dwForceAttack, int.to_bytes(attack_state, 1, 'big'))
+            time.sleep(0.01)
 
 
 if __name__ == "__main__":

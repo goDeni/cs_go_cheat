@@ -16,6 +16,7 @@ class Player:
         self._alive: Optional[bool] = None
         self._vector: Optional[Vector] = None
         self._head_vector: Optional[Vector] = None
+        self._target_id: Optional[int] = None
 
     def read_all_variables(self):
         self._team = self.get_team()
@@ -23,6 +24,7 @@ class Player:
         self._alive = self.is_alive(self._health)
         self._vector = self.get_vector()
         self._head_vector = self.get_head_vector(self._vector)
+        self._target_id = self.get_target_id()
 
     @property
     def team(self) -> int:
@@ -44,8 +46,15 @@ class Player:
     def head_vector(self) -> Vector:
         return self._head_vector
 
+    @property
+    def target_id(self) -> int:
+        return self._target_id
+
     def _rpm(self, offset: int, c_type) -> Any:
         return rpm(self._handle, self._base_address + offset, c_type)
+
+    def get_target_id(self) -> int:
+        return self._rpm(offsets.m_iCrosshairId, INT).value
 
     def get_team(self) -> int:
         return self._rpm(offsets.m_iTeamNum, INT).value
