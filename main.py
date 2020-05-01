@@ -10,9 +10,10 @@ from custom_types import Int4x4Array
 from player import Player
 from player_drawer import PlayerDrawer
 from process import rpm, get_process_handle, get_process_id, wpm
+from trigger_bot import TriggerBot
 
 CSGO_PROCESS_NAME = 'csgo.exe'
-MODULE_NAME = "client_panorama.dll"
+CLIENT_MODULE_NAME = "client_panorama.dll"
 
 
 def get_module_address(process_handle: int, module_name: str) -> int:
@@ -43,31 +44,25 @@ def main():
     dc = win32gui.GetDC(hwnd)
 
     with get_process_handle(pid) as process_handle:
-        base_address = get_module_address(process_handle, MODULE_NAME)
-        attack_state = 0
-        TRIGGER_BOT = False
+        client_address = get_module_address(process_handle, CLIENT_MODULE_NAME)
 
+        local_player = Player(process_handle.handle, 0)
+        trigger_bot = TriggerBot(local_player, process_handle.handle, client_address)
+        # trigger_bot.enable()
         while True:
-            view_matrix = rpm(process_handle.handle, base_address + offsets.dwViewMatrix, Int4x4Array)
-            local_player_pointer = rpm(process_handle.handle, base_address + offsets.dwLocalPlayer, DWORD)
-            local_player = Player(
-                process_handle.handle,
-                local_player_pointer.value
-            )
+            view_matrix = rpm(process_handle.handle, client_address + offsets.dwViewMatrix, Int4x4Array)
+            local_player_pointer = rpm(process_handle.handle, client_address + offsets.dwLocalPlayer, DWORD)
+            local_player.change_pointer_if_needed(local_player_pointer)
             local_player.read_all_variables()
 
             for i in range(64):
-                player_pointer = rpm(process_handle.handle, base_address + offsets.dwEntityList + (i * 0x10), DWORD)
+                player_pointer = rpm(process_handle.handle, client_address + offsets.dwEntityList + (i * 0x10), DWORD)
                 other_player = Player(process_handle.handle, player_pointer.value)
                 if not other_player.is_alive() or other_player.get_team() == local_player.team:
                     continue
                 p_drawer = PlayerDrawer(other_player, view_matrix, dc, screen_x, screen_y)
 
-                if TRIGGER_BOT and i == local_player.target_id:
-                    if attack_state:
-                        attack_state = 0
-                    else:
-                        attack_state = 1
+                trigger_bot.shoot_if_needed(i)
 
                 other_player.read_all_variables()
                 p_drawer.calc_position()
@@ -77,9 +72,7 @@ def main():
                     p_drawer.draw_health()
                     p_drawer.draw_line_to_player()
 
-            if TRIGGER_BOT and attack_state:
-                attack_state = 0
-                wpm(process_handle.handle, base_address + offsets.dwForceAttack, int.to_bytes(attack_state, 1, 'big'))
+            trigger_bot.clear_shoot_state()
             time.sleep(0.01)
 
 

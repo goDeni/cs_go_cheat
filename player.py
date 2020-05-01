@@ -1,4 +1,4 @@
-from ctypes.wintypes import INT
+from ctypes.wintypes import INT, DWORD
 from typing import Optional, Any
 
 import offsets
@@ -7,9 +7,9 @@ from process import rpm
 
 
 class Player:
-    def __init__(self, handle: int, base_address: int):
+    def __init__(self, handle: int, player_pointer: int):
         self._handle = handle
-        self._base_address = base_address
+        self._player_pointer = player_pointer
 
         self._team: Optional[int] = None
         self._health: Optional[int] = None
@@ -25,6 +25,10 @@ class Player:
         self._vector = self.get_vector()
         self._head_vector = self.get_head_vector(self._vector)
         self._target_id = self.get_target_id()
+
+    def change_pointer_if_needed(self, pointer: DWORD):
+        if self._player_pointer != pointer.value:
+            self._player_pointer = pointer.value
 
     @property
     def team(self) -> int:
@@ -51,7 +55,7 @@ class Player:
         return self._target_id
 
     def _rpm(self, offset: int, c_type) -> Any:
-        return rpm(self._handle, self._base_address + offset, c_type)
+        return rpm(self._handle, self._player_pointer + offset, c_type)
 
     def get_target_id(self) -> int:
         return self._rpm(offsets.m_iCrosshairId, INT).value
