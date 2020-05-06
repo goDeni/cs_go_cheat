@@ -5,6 +5,7 @@ from typing import Any, Callable
 import psutil
 import win32api
 import win32con
+import win32process
 
 ReadProcessMemory: Callable[[int, int, Any, int], bool] = windll.kernel32.ReadProcessMemory
 WriteProcessMemory: Callable[[int, int, Any, int], bool] = windll.kernel32.WriteProcessMemory
@@ -40,3 +41,11 @@ def get_process_handle(pid: int):
         yield process_handle
     finally:
         process_handle.close()
+
+
+def get_module_address(process_handle: int, module_name: str) -> int:
+    modules = win32process.EnumProcessModulesEx(process_handle, win32process.LIST_MODULES_ALL)
+    for module in modules:
+        m = win32process.GetModuleFileNameEx(process_handle, module)
+        if m.endswith(module_name):
+            return module

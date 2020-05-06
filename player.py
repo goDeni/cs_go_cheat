@@ -17,6 +17,7 @@ class Player:
         self._vector: Optional[Vector] = None
         self._head_vector: Optional[Vector] = None
         self._target_id: Optional[int] = None
+        self._glow_index: Optional[int] = None
 
     def read_all_variables(self):
         self._team = self.get_team()
@@ -25,6 +26,7 @@ class Player:
         self._vector = self.get_vector()
         self._head_vector = self.get_head_vector(self._vector)
         self._target_id = self.get_target_id()
+        self._glow_index = self.get_glow_index()
 
     def change_pointer_if_needed(self, pointer: DWORD):
         if self._player_pointer != pointer.value:
@@ -54,6 +56,10 @@ class Player:
     def target_id(self) -> int:
         return self._target_id
 
+    @property
+    def glow_index(self) -> int:
+        return self._glow_index
+
     def _rpm(self, offset: int, c_type) -> Any:
         return rpm(self._handle, self._player_pointer + offset, c_type)
 
@@ -70,6 +76,9 @@ class Player:
         if health is None:
             health = self.get_health()
         return 0 < health <= 100
+
+    def get_glow_index(self) -> int:
+        return self._rpm(offsets.m_iGlowIndex, INT).value
 
     def get_vector(self) -> Vector:
         return self._rpm(offsets.m_vecOrigin, Vector)
