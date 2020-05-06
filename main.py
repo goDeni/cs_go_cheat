@@ -14,6 +14,7 @@ from trigger_bot import TriggerBot
 
 CSGO_PROCESS_NAME = 'csgo.exe'
 CLIENT_MODULE_NAME = "client_panorama.dll"
+ENGINE_MODULE_NAME = "engine.dll"
 
 
 def get_module_address(process_handle: int, module_name: str) -> int:
@@ -45,17 +46,30 @@ def main():
 
     with get_process_handle(pid) as process_handle:
         client_address = get_module_address(process_handle, CLIENT_MODULE_NAME)
+        engine_address = get_module_address(process_handle, ENGINE_MODULE_NAME)
+
+        client_state_pointer: DWORD = rpm(process_handle.handle, engine_address + offsets.dwClientState, DWORD)
+
+        print(
+            f"{CSGO_PROCESS_NAME} pid: {pid}\n"
+            f"handle: {process_handle.handle}\n"
+            f"engine_address ({ENGINE_MODULE_NAME}): {engine_address}\n"
+            f"client_address ({CLIENT_MODULE_NAME}): {client_address}\n"
+            f"client_state: {client_state_pointer.value}"
+        )
 
         local_player = Player(process_handle.handle, 0)
         trigger_bot = TriggerBot(local_player, process_handle.handle, client_address)
         # trigger_bot.enable()
         while True:
+            max_players: INT = rpm(process_handle.handle, client_state_pointer.value + offsets.dwClientState_MaxPlayer, INT)
+
             view_matrix = rpm(process_handle.handle, client_address + offsets.dwViewMatrix, Int4x4Array)
             local_player_pointer = rpm(process_handle.handle, client_address + offsets.dwLocalPlayer, DWORD)
             local_player.change_pointer_if_needed(local_player_pointer)
             local_player.read_all_variables()
 
-            for i in range(64):
+            for i in range(max_players.value):
                 player_pointer = rpm(process_handle.handle, client_address + offsets.dwEntityList + (i * 0x10), DWORD)
                 other_player = Player(process_handle.handle, player_pointer.value)
                 if not other_player.is_alive() or other_player.get_team() == local_player.team:
