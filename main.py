@@ -2,12 +2,13 @@ import datetime
 import time
 from functools import partial
 from threading import Event
-from typing import Callable
+from typing import Callable, List
 
 from client_control import ClientControl, CLIENT_MODULE_NAME
 from engine_control import EngineControl, ENGINE_MODULE_NAME
 from glow_object_manager import GlowObjectManager
 from in_game_control import InGameControl
+from player import Player
 from process import get_process_handle, get_process_id
 
 CSGO_PROCESS_NAME = 'csgo.exe'
@@ -20,17 +21,27 @@ def start_wallhack(engine_control: EngineControl,
     print(datetime.datetime.now().isoformat(), 'Wallhack enabled')
     local_player = client_control.get_local_player()
 
+    players_list: List[Player] = []
     while is_in_game_event.is_set():
         max_players_count = engine_control.get_max_players()
         if not max_players_count:
             break
 
-        local_player_pointer = client_control.get_local_player_pointer()
-        local_player.change_pointer_if_needed(local_player_pointer)
+        local_player.change_pointer_if_needed(
+            client_control.get_local_player_pointer()
+        )
         local_player.read_all_variables()
 
         for i in range(max_players_count):
-            other_player = client_control.get_player_by_index(i)
+            try:
+                other_player = players_list[i]
+                other_player.change_pointer_if_needed(
+                    client_control.get_player_pointer(i)
+                )
+            except IndexError:
+                other_player = client_control.get_player_by_index(i)
+                players_list.append(other_player)
+
             if not other_player.is_alive() or other_player.get_team() == local_player.team:
                 continue
 
