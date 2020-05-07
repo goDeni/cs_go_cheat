@@ -21,7 +21,6 @@ def start_wallhack(engine_control: EngineControl,
     print(datetime.datetime.now().isoformat(), 'Wallhack enabled')
     local_player = client_control.get_local_player()
 
-    players_list: List[Player] = []
     while is_in_game_event.is_set():
         max_players_count = engine_control.get_max_players()
         if not max_players_count:
@@ -33,14 +32,7 @@ def start_wallhack(engine_control: EngineControl,
         local_player.read_all_variables()
 
         for i in range(max_players_count):
-            try:
-                other_player = players_list[i]
-                other_player.change_pointer_if_needed(
-                    client_control.get_player_pointer(i)
-                )
-            except IndexError:
-                other_player = client_control.get_player_by_index(i)
-                players_list.append(other_player)
+            other_player = client_control.get_player_by_index(i)
 
             if not other_player.is_alive() or other_player.get_team() == local_player.team:
                 continue
