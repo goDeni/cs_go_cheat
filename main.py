@@ -1,13 +1,44 @@
+import datetime
 import time
+from functools import partial
+from threading import Event
+from typing import Callable
 
 from client_control import ClientControl, CLIENT_MODULE_NAME
 from engine_control import EngineControl, ENGINE_MODULE_NAME
 from glow_object_manager import GlowObjectManager
-from player import Player
+from in_game_control import InGameControl
 from process import get_process_handle, get_process_id
-from trigger_bot import TriggerBot
 
 CSGO_PROCESS_NAME = 'csgo.exe'
+
+
+def start_wallhack(engine_control: EngineControl,
+                   client_control: ClientControl,
+                   glow_object_manager: GlowObjectManager,
+                   is_in_game_event: Event):
+    print(datetime.datetime.now().isoformat(), 'Wallhack enabled')
+    local_player = client_control.get_local_player()
+
+    while is_in_game_event.is_set():
+        max_players_count = engine_control.get_max_players()
+        if not max_players_count:
+            break
+
+        local_player_pointer = client_control.get_local_player_pointer()
+        local_player.change_pointer_if_needed(local_player_pointer)
+        local_player.read_all_variables()
+
+        for i in range(max_players_count):
+            other_player = client_control.get_player_by_index(i)
+            if not other_player.is_alive() or other_player.get_team() == local_player.team:
+                continue
+
+            other_player.read_all_variables()
+            glow_object_manager.draw_player(other_player.glow_index, other_player.health)
+
+        time.sleep(0.01)
+    print(datetime.datetime.now().isoformat(), 'Wallhack disabled')
 
 
 def main():
@@ -29,28 +60,15 @@ def main():
             f"client_address ({CLIENT_MODULE_NAME}): {client_control.address}\n"
             f"client_state: {engine_control.client_state_pointer}"
         )
+        start_wallhack_callback: Callable[[Event], None] = partial(start_wallhack,
+                                                                   engine_control,
+                                                                   client_control,
+                                                                   glow_object_manager)
+        in_game_control = InGameControl(engine_control, start_wallhack_callback)
+        in_game_control.start()
 
-        local_player = Player(process_handle.handle, 0)
-        trigger_bot = TriggerBot(local_player, process_handle.handle, client_control.address)
-        # trigger_bot.enable()
         while True:
-            max_players_count = engine_control.get_max_players()
-            local_player_pointer = client_control.get_local_player_pointer()
-            local_player.change_pointer_if_needed(local_player_pointer)
-            local_player.read_all_variables()
-
-            for i in range(max_players_count):
-                player_pointer = client_control.get_player_pointer(i)
-                other_player = Player(process_handle.handle, player_pointer)
-                if not other_player.is_alive() or other_player.get_team() == local_player.team:
-                    continue
-
-                trigger_bot.shoot_if_needed(i)
-                other_player.read_all_variables()
-                glow_object_manager.draw_player(other_player.glow_index, other_player.health)
-
-            trigger_bot.clear_shoot_state()
-            time.sleep(0.01)
+            time.sleep(10)
 
 
 if __name__ == "__main__":

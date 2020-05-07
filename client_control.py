@@ -2,6 +2,7 @@ from ctypes.wintypes import DWORD
 from typing import Any
 
 import offsets
+from player import Player
 from process import get_module_address, rpm
 
 CLIENT_MODULE_NAME = "client_panorama.dll"
@@ -25,3 +26,11 @@ class ClientControl:
 
     def get_player_pointer(self, index: int) -> int:
         return self._rpm(offsets.dwEntityList + (index * 0x10), DWORD).value
+
+    def get_local_player(self) -> Player:
+        local_player_pointer = self.get_local_player_pointer()
+        return Player(self._handle, local_player_pointer)
+
+    def get_player_by_index(self, index: int):
+        player_pointer = self.get_player_pointer(index)
+        return Player(self._handle, player_pointer)
