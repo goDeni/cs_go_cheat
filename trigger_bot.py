@@ -8,10 +8,10 @@ def set_shoot_state(handle: int, base_address: int, state: bool):
 
 
 class TriggerBot:
-    def __init__(self, player: Player, handle: int, base_address: int):
+    def __init__(self, player: Player, handle: int, client_address: int):
         self._player = player
         self._handle = handle
-        self._base_address = base_address
+        self._client_address = client_address
         self._enabled = False
         self._attack_state = False
 
@@ -23,7 +23,7 @@ class TriggerBot:
 
     def shoot(self):
         self._attack_state = not self._attack_state
-        set_shoot_state(self._handle, self._base_address, self._attack_state)
+        set_shoot_state(self._handle, self._client_address, self._attack_state)
 
     def clear_shoot_state(self):
         if self._attack_state:

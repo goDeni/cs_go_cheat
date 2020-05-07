@@ -28,9 +28,9 @@ class Player:
         self._target_id = self.get_target_id()
         self._glow_index = self.get_glow_index()
 
-    def change_pointer_if_needed(self, pointer: DWORD):
-        if self._player_pointer != pointer.value:
-            self._player_pointer = pointer.value
+    def change_pointer_if_needed(self, pointer: int):
+        if self._player_pointer != pointer:
+            self._player_pointer = pointer
 
     @property
     def team(self) -> int:

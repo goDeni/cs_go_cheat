@@ -10,10 +10,9 @@ from process import rpm, wpm
 
 class GlowObjectManager:
     def __init__(self, client_address: int, handle: int):
-        self._client_address = client_address
         self._handle = handle
 
-        self._pointer: int = rpm(handle, self._client_address + offsets.dwGlowObjectManager, DWORD).value
+        self._pointer: int = rpm(handle, client_address + offsets.dwGlowObjectManager, DWORD).value
 
     def _rpm(self, offset: int, c_type) -> Any:
         return rpm(self._handle, self._pointer + offset, c_type)
