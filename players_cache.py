@@ -1,4 +1,6 @@
-from threading import Lock
+import time
+from datetime import datetime
+from threading import Lock, Event, Thread
 from typing import Generator, Dict
 
 from client_control import ClientControl
@@ -16,12 +18,16 @@ class PlayersCache:
         self._local_player = client_control.get_local_player()
         self._players: Dict[int, Player] = {}
         self._create_player_lock = Lock()
+        self._max_players_count = 0
 
-    def get_local_player(self, read_variables: bool = False) -> Player:
+    def get_local_player(self,
+                         read_variables: bool = False,
+                         change_pointer_if_needed: bool = False) -> Player:
         p = self._local_player
-        p.change_pointer_if_needed(
-            self._client_control.get_local_player_pointer()
-        )
+        if change_pointer_if_needed:
+            p.change_pointer_if_needed(
+                self._client_control.get_local_player_pointer()
+            )
         if read_variables:
             p.read_all_variables()
         return p
@@ -35,12 +41,15 @@ class PlayersCache:
             if index not in self._players:
                 self._players[index] = self._client_control.get_player_by_index(index)
 
-    def get_player_by_index(self, i: int, read_variables: bool = False) -> Player:
+    def get_player_by_index(self, i: int,
+                            read_variables: bool = False,
+                            change_pointer_if_needed: bool = False) -> Player:
         self.create_player_if_doesnt_exist(i)
         p = self._players[i]
-        p.change_pointer_if_needed(
-            self._client_control.get_player_pointer(i)
-        )
+        if change_pointer_if_needed:
+            p.change_pointer_if_needed(
+                self._client_control.get_player_pointer(i)
+            )
         if read_variables:
             p.read_all_variables()
         return p
@@ -51,11 +60,33 @@ class PlayersCache:
 
     @property
     def players(self) -> Generator[Player, None, None]:
-        max_players_count = self._engine_control.get_max_players()
-        for i in range(max_players_count):
-            yield self.get_player_by_index(i, read_variables=True)
+        for i in range(self._max_players_count):
+            yield self.get_player_by_index(i)
 
     def read_all_players(self, *args):
-        for _ in self.players:
-            continue
-        print(f"{len(self._players)} игроков было прочитано")
+        self._max_players_count = self._engine_control.get_max_players()
+        self.get_local_player(read_variables=True,
+                              change_pointer_if_needed=True)
+        for i in range(self._max_players_count):
+            self.get_player_by_index(i,
+                                     read_variables=True,
+                                     change_pointer_if_needed=True)
+
+    def follow_players(self, is_in_game: Event):
+        print(datetime.now().isoformat(), "Players following started")
+        while is_in_game.is_set():
+            self._max_players_count = self._engine_control.get_max_players()
+            self.get_local_player(read_variables=True,
+                                  change_pointer_if_needed=True)
+            for i in range(self._max_players_count):
+                self.get_player_by_index(i,
+                                         read_variables=True,
+                                         change_pointer_if_needed=True)
+            time.sleep(0.01)
+        print(datetime.now().isoformat(), "Players following stopped")
+
+
+def start_players_follow_thread(players_cache: PlayersCache, is_in_game: Event):
+    Thread(target=players_cache.follow_players,
+           name='follow players thread',
+           args=(is_in_game,)).start()

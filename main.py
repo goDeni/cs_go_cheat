@@ -7,7 +7,7 @@ from client_control import ClientControl, CLIENT_MODULE_NAME
 from engine_control import EngineControl, ENGINE_MODULE_NAME
 from glow_object_manager import GlowObjectManager
 from in_game_control import InGameControl
-from players_cache import PlayersCache
+from players_cache import PlayersCache, start_players_follow_thread
 from process import get_process_handle, get_process_id
 from wallhack import start_wallhack_thread
 
@@ -42,6 +42,7 @@ def main():
         in_game_control = InGameControl(engine_control,
                                         start_game_callback=[
                                             players_cache.read_all_players,
+                                            partial(start_players_follow_thread, players_cache),
                                             start_wallhack_callback,
                                         ],
                                         stop_game_callback=[

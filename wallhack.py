@@ -12,7 +12,7 @@ def _start_wallhack(players_cache: PlayersCache,
     print(datetime.datetime.now().isoformat(), 'Wallhack enabled')
 
     while is_in_game_event.is_set():
-        local_player = players_cache.get_local_player(read_variables=True)
+        local_player = players_cache.get_local_player()
 
         for player in players_cache.players:
             if not player.alive or player.team == local_player.team:
