@@ -1,5 +1,10 @@
+import time
+from datetime import datetime
+from threading import Event, Thread
+
 import offsets
-from player import Player
+from client_control import ClientControl
+from players_cache import PlayersCache
 from process import wpm
 
 
@@ -7,30 +12,30 @@ def set_shoot_state(handle: int, base_address: int, state: bool):
     wpm(handle, base_address + offsets.dwForceAttack, int.to_bytes(int(state), 1, 'big'))
 
 
-class TriggerBot:
-    def __init__(self, player: Player, handle: int, client_address: int):
-        self._player = player
-        self._handle = handle
-        self._client_address = client_address
-        self._enabled = False
-        self._attack_state = False
+def start_trigger_bot(client_control: ClientControl,
+                      players_cache: PlayersCache,
+                      is_in_game: Event):
+    def shoot():
+        client_control.set_shoot_state(True)
+        time.sleep(0.1)
+        client_control.set_shoot_state(False)
 
-    def enable(self):
-        self._enabled = True
+    print(datetime.now().isoformat(), "Trigger bot enabled")
 
-    def disable(self):
-        self._enabled = False
+    while is_in_game.is_set():
+        local_player = players_cache.get_local_player()
+        if 0 < local_player.target_id <= players_cache.max_players_count:
+            enemy_player = players_cache.get_player_by_index(local_player.target_id)
+            if enemy_player.team != local_player.team:
+                shoot()
+                time.sleep(0.2)
+        time.sleep(0.01)
+    print(datetime.now().isoformat(), "Trigger bot disabled")
 
-    def shoot(self):
-        self._attack_state = not self._attack_state
-        set_shoot_state(self._handle, self._client_address, self._attack_state)
 
-    def clear_shoot_state(self):
-        if self._attack_state:
-            self.shoot()
-
-    def shoot_if_needed(self, target_id: int):
-        if not self._enabled:
-            return
-        if self._player.target_id == target_id:
-            self.shoot()
+def start_trigger_bot_thread(client_control: ClientControl,
+                             players_cache: PlayersCache,
+                             is_in_game: Event):
+    Thread(target=start_trigger_bot,
+           name="trigger bot",
+           args=(client_control, players_cache, is_in_game)).start()

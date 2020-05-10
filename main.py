@@ -9,6 +9,7 @@ from glow_object_manager import GlowObjectManager
 from in_game_control import InGameControl
 from players_cache import PlayersCache, start_players_follow_thread
 from process import get_process_handle, get_process_id
+from trigger_bot import start_trigger_bot_thread
 from wallhack import start_wallhack_thread
 
 CSGO_PROCESS_NAME = 'csgo.exe'
@@ -44,6 +45,7 @@ def main():
                                             players_cache.read_all_players,
                                             partial(start_players_follow_thread, players_cache),
                                             start_wallhack_callback,
+                                            partial(start_trigger_bot_thread, client_control, players_cache),
                                         ],
                                         stop_game_callback=[
                                             players_cache.clear,

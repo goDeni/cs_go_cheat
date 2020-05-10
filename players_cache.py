@@ -20,6 +20,10 @@ class PlayersCache:
         self._create_player_lock = Lock()
         self._max_players_count = 0
 
+    @property
+    def max_players_count(self) -> int:
+        return self._max_players_count
+
     def get_local_player(self,
                          read_variables: bool = False,
                          change_pointer_if_needed: bool = False) -> Player:
