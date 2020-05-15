@@ -1,0 +1,4 @@
+psutil==5.7.0
+pypiwin32==223
+numpy==1.18.4
+sounddevice==0.3.15
