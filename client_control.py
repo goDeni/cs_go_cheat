@@ -1,11 +1,11 @@
-from ctypes.wintypes import DWORD, BOOLEAN
+from ctypes.wintypes import DWORD
 from typing import Any
 
 import offsets
 from player import Player
 from process import get_module_address, rpm, wpm
 
-CLIENT_MODULE_NAME = "client_panorama.dll"
+CLIENT_MODULE_NAME = "client.dll"
 
 
 class ClientControl:

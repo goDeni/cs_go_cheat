@@ -3,9 +3,9 @@ from ctypes import create_string_buffer, sizeof, c_char, c_buffer, byref, windll
 from typing import Any, Callable
 
 import psutil
+import pymem
 import win32api
 import win32con
-import win32process
 
 ReadProcessMemory: Callable[[int, int, Any, int], bool] = windll.kernel32.ReadProcessMemory
 WriteProcessMemory: Callable[[int, int, Any, int], bool] = windll.kernel32.WriteProcessMemory
@@ -44,8 +44,4 @@ def get_process_handle(pid: int):
 
 
 def get_module_address(process_handle: int, module_name: str) -> int:
-    modules = win32process.EnumProcessModulesEx(process_handle, win32process.LIST_MODULES_ALL)
-    for module in modules:
-        m = win32process.GetModuleFileNameEx(process_handle, module)
-        if m.endswith(module_name):
-            return module
+    return pymem.process.module_from_name(process_handle, module_name).lpBaseOfDll
