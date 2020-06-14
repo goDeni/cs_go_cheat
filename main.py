@@ -3,6 +3,9 @@ from functools import partial
 from threading import Event
 from typing import Callable
 
+from pymem import Pymem
+from win32api import GetSystemMetrics
+
 from client_control import ClientControl, CLIENT_MODULE_NAME
 from engine_control import EngineControl, ENGINE_MODULE_NAME
 from glow_object_manager import GlowObjectManager
@@ -21,15 +24,15 @@ def main():
         print(f"Процесс {CSGO_PROCESS_NAME} не найден")
         return
 
-    with get_process_handle(pid) as process_handle:
-        client_control = ClientControl(process_handle.handle)
-        engine_control = EngineControl(process_handle.handle)
+    with get_process_handle(pid) as process:  # type: Pymem
+        client_control = ClientControl(process)
+        engine_control = EngineControl(process)
 
-        glow_object_manager = GlowObjectManager(client_control.address, process_handle.handle)
+        glow_object_manager = GlowObjectManager(client_control.address, process)
 
         print(
             f"{CSGO_PROCESS_NAME} pid: {pid}\n"
-            f"handle: {process_handle.handle}\n"
+            f"handle: {process.process_handle}\n"
             f"engine_address ({ENGINE_MODULE_NAME}): {engine_control.client_state_pointer}\n"
             f"client_address ({CLIENT_MODULE_NAME}): {client_control.address}\n"
             f"client_state: {engine_control.client_state_pointer}"

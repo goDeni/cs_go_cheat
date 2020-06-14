@@ -1,24 +1,26 @@
-from ctypes.wintypes import DWORD
-from typing import Any, Optional
+from typing import Optional, TypeVar, Type
 
 from _ctypes import sizeof
+from pymem import Pymem
 
 import offsets
 from custom_types import GlowObjectDefinition
 from process import rpm, wpm
 
+T = TypeVar('T')
+
 
 class GlowObjectManager:
-    def __init__(self, client_address: int, handle: int):
-        self._handle = handle
+    def __init__(self, client_address: int, process: Pymem):
+        self._process = process
 
-        self._pointer: int = rpm(handle, client_address + offsets.dwGlowObjectManager, DWORD).value
+        self._pointer: int = process.read_int(client_address + offsets.dwGlowObjectManager)
 
-    def _rpm(self, offset: int, c_type) -> Any:
-        return rpm(self._handle, self._pointer + offset, c_type)
+    def _rpm(self, offset: int, c_type: Type[T]) -> T:
+        return rpm(self._process.process_handle, self._pointer + offset, c_type)
 
     def _wpm(self, offset: int, data: bytes):
-        return wpm(self._handle, self._pointer + offset, data)
+        return wpm(self._process.process_handle, self._pointer + offset, data)
 
     def draw_player(self, glow_index: int, health: Optional[int] = 0):
         glow_offset = glow_index * sizeof(GlowObjectDefinition)
@@ -43,5 +45,3 @@ class GlowObjectManager:
         glow_object_definition.m_bRenderWhenUnoccluded = 0
 
         self._wpm(glow_offset, bytes(glow_object_definition))
-
-

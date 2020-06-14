@@ -1,5 +1,7 @@
-from ctypes.wintypes import INT, DWORD
 from typing import Optional, Any
+
+from pymem import Pymem
+from pymem.exception import MemoryReadError
 
 import offsets
 from custom_types import Vector
@@ -7,8 +9,8 @@ from process import rpm
 
 
 class Player:
-    def __init__(self, handle: int, player_pointer: int):
-        self._handle = handle
+    def __init__(self, process: Pymem, player_pointer: int):
+        self._process = process
         self._player_pointer = player_pointer
 
         self._team: Optional[int] = None
@@ -18,6 +20,12 @@ class Player:
         self._head_vector: Optional[Vector] = None
         self._target_id: Optional[int] = None
         self._glow_index: Optional[int] = None
+
+    def _read_int(self, address: int) -> int:
+        try:
+            return self._process.read_int(self._player_pointer + address)
+        except MemoryReadError:
+            return 0
 
     def read_all_variables(self):
         self._team = self.get_team()
@@ -61,16 +69,16 @@ class Player:
         return self._glow_index
 
     def _rpm(self, offset: int, c_type) -> Any:
-        return rpm(self._handle, self._player_pointer + offset, c_type)
+        return rpm(self._process.process_handle, self._player_pointer + offset, c_type)
 
     def get_target_id(self) -> int:
-        return self._rpm(offsets.m_iCrosshairId, INT).value
+        return self._read_int(offsets.m_iCrosshairId)
 
     def get_team(self) -> int:
-        return self._rpm(offsets.m_iTeamNum, INT).value
+        return self._read_int(offsets.m_iTeamNum)
 
     def get_health(self) -> int:
-        return self._rpm(offsets.m_iHealth, INT).value
+        return self._read_int(offsets.m_iHealth)
 
     def is_alive(self, health: Optional[int] = None) -> bool:
         if health is None:
@@ -78,7 +86,7 @@ class Player:
         return 0 < health <= 100
 
     def get_glow_index(self) -> int:
-        return self._rpm(offsets.m_iGlowIndex, INT).value
+        return self._read_int(offsets.m_iGlowIndex)
 
     def get_vector(self) -> Vector:
         return self._rpm(offsets.m_vecOrigin, Vector)
@@ -89,4 +97,4 @@ class Player:
         return Vector(vector.x, vector.y, vector.z + 75)
 
     def get_life_state(self) -> int:
-        return self._rpm(offsets.m_lifeState, INT).value
+        return self._read_int(offsets.m_lifeState)

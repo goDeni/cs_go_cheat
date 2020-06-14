@@ -1,28 +1,32 @@
-from ctypes.wintypes import DWORD, INT
-from typing import Any
+from functools import partial
+from typing import Any, Callable
+
+from pymem import Pymem
 
 import offsets
-from process import rpm, get_module_address
+from process import get_module_address
 
 ENGINE_MODULE_NAME = "engine.dll"
 
 
 class EngineControl:
-    def __init__(self, handle: int):
-        self._base_addr = get_module_address(handle, ENGINE_MODULE_NAME)
-        self._handle = handle
+    def __init__(self, process: Pymem):
+        self._base_addr = get_module_address(process.process_handle, ENGINE_MODULE_NAME)
+        self._process = process
 
-        self._client_state_pointer: DWORD = rpm(handle, self._base_addr + offsets.dwClientState, DWORD)
+        self._client_state_pointer = self._process.read_int(self._base_addr + offsets.dwClientState)
+
+        self._read_int: Callable[[Any], int] = partial(
+            lambda *args: self._process.read_int(sum(args)),
+            self._client_state_pointer
+        )
 
     @property
     def client_state_pointer(self) -> int:
-        return self._client_state_pointer.value
-
-    def _rpm(self, offset: int, c_type) -> Any:
-        return rpm(self._handle, self.client_state_pointer + offset, c_type)
+        return self._client_state_pointer
 
     def is_ingame(self) -> bool:
-        return self._rpm(offsets.dwClientState_State, INT).value == 6
+        return self._read_int(offsets.dwClientState_State) == 6
 
     def get_max_players(self) -> int:
-        return self._rpm(offsets.dwClientState_MaxPlayer, INT).value
+        return self._read_int(offsets.dwClientState_MaxPlayer)
